@@ -85,8 +85,78 @@ def cic_mas(delta,
     
     
     return delta
+@jax.jit
+def cic_mas_vec(delta,
+            x, y, z, w, 
+            n_part, 
+            xmin, 
+            ymin,
+            zmin,
+            box_size,
+            n_bins,
+            wrap):
 
-#@jax.jit #Must include custom binning for this
+
+    bin_size = box_size / n_bins
+    inv_bin_size = 1. / bin_size
+
+    xpos = (x - xmin) * inv_bin_size
+    ypos = (y - ymin) * inv_bin_size
+    zpos = (z - zmin) * inv_bin_size
+
+    ix = jnp.int32(xpos)# % nbins
+    iy = jnp.int32(ypos)# % nbins
+    iz = jnp.int32(zpos)# % nbins
+
+    ddx = xpos-ix
+    ddy = ypos-iy
+    ddz = zpos-iz
+
+    ixp = ix + 1;
+    iyp = iy + 1;
+    izp = iz + 1;
+
+    def true_wrap(input):
+        ixp, iyp, izp, ddx, ddy, ddz, n_bins = input
+        return (ixp + n_bins) % n_bins, (iyp + n_bins) % n_bins, (izp + n_bins) % n_bins,\
+                ddx, ddy, ddz
+    def false_wrap(input):
+        ixp, iyp, izp, ddx, ddy, ddz, n_bins = input
+        ixp = jnp.where(ixp >= n_bins, 0, ixp)
+        ddx = jnp.where(ixp >= n_bins, 0, ddx)
+
+        iyp = jnp.where(iyp >= n_bins, 0, iyp)
+        ddy = jnp.where(iyp >= n_bins, 0, ddy)
+
+        izp = jnp.where(izp >= n_bins, 0, izp)
+        ddz = jnp.where(izp >= n_bins, 0, ddz)
+
+        return ixp, iyp, izp, ddx, ddy, ddz
+
+    ixp, iyp, izp, ddx, ddy, ddz = jax.lax.cond(wrap, true_wrap, false_wrap, (ixp, iyp, izp, ddx, ddy, ddz, n_bins))
+    
+    mdx = (1.0 - ddx)
+    mdy = (1.0 - ddy)
+    mdz = (1.0 - ddz)
+
+    delta = jax.ops.index_add(delta, (ix, iy, iz), mdx * mdy * mdz * w)
+    delta = jax.ops.index_add(delta, (ixp, iy, iz), ddx * mdy * mdz * w)
+    delta = jax.ops.index_add(delta, (ix, iyp, iz), mdx * ddy * mdz * w)
+    delta = jax.ops.index_add(delta, (ix, iy, izp), mdx * mdy * ddz * w)
+
+    delta = jax.ops.index_add(delta, (ixp, iyp, iz), ddx * ddy * mdz * w)
+    delta = jax.ops.index_add(delta, (ixp, iy, izp), ddx * mdy * ddz * w)
+    delta = jax.ops.index_add(delta, (ix, iyp, izp), mdx * ddy * ddz * w)
+
+    delta = jax.ops.index_add(delta, (ixp, iyp, izp), ddx * ddy * ddz * w)
+
+    return delta
+
+    
+
+    
+    
+    return delta
 
 
 
