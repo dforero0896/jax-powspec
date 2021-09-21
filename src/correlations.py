@@ -3,6 +3,7 @@ import jax
 import jax.numpy as jnp
 from jax.experimental import loops
 
+
 def powspec(delta, box_size):
 
     dims = delta.shape[0]
@@ -108,7 +109,7 @@ def powspec_vec(delta, box_size, k_edges):
     prefact = jnp.pi / dims
     kmax_per = jnp.int32(jnp.sqrt(middle**2 + middle**2))
     kmax     = jnp.int32(jnp.sqrt(middle**2 + middle**2 + middle**2))
-    print(kmax)
+    
 
     def cic_correction(x, index):
         return (1. / jnp.sinc(x/jnp.pi))**index
@@ -159,7 +160,7 @@ def powspec_vec_fundamental(delta, box_size):
     prefact = jnp.pi / dims
     kmax_per = jnp.int32(jnp.sqrt(middle**2 + middle**2))
     kmax     = jnp.int32(jnp.sqrt(middle**2 + middle**2 + middle**2))
-    print(kmax)
+    
 
     def cic_correction(x, index):
         return (1. / jnp.sinc(x/jnp.pi))**index

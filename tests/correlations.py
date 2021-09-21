@@ -16,7 +16,7 @@ import MAS_library as MASL
 import Pk_library as PKL
 
 
-n_bins = 256
+n_bins = 300
 n_part = 1000
 box_size = 2500.
 k_ny = jnp.pi * n_bins / box_size
@@ -73,7 +73,7 @@ pk = Pk.Pk[mask]
 ax[2].plot(k, pk[:,0]-shot_noise, label='Pylians', ls = '--')
 
 
-kedges = jnp.arange(1e-4, 5, 0.1e-2)
+kedges = jnp.arange(1e-4, 5, 0.2e-2)
 
 k, pk, modes = powspec_vec(delta, box_size, kedges) 
 mask = k < k_ny
@@ -112,10 +112,42 @@ ax[1].format(title='$\delta(x)$ Pylians')
 
 fig.savefig("plots/jax-cic.png", dpi=300)
 
-def loss(alpha):
-    return jnp.nanmean(plin - alpha*(pk[:,0]-shot_noise))
+exit()
+plin = jc.power.linear_matter_power(jc.Planck15(), k, a=1. / (1 + z), transfer_fn=jc.transfer.Eisenstein_Hu)
 
-print(loss(1.))
+def loss(w):
+    nbins = 64
+    delta = jnp.zeros((n_bins, n_bins, n_bins))
+    delta = cic_mas_vec(delta,
+                particles[:,0], particles[:,1], particles[:,2], w, 
+                n_part, 
+                particles[:,0].min(), particles[:,1].min(), particles[:,2].min(),
+                box_size,
+                n_bins,
+                True)
+    delta /= delta.mean()
+    delta -= 1.
+    k, pk, modes = powspec_vec_fundamental(delta, box_size) 
+    mask = k < k_ny
+    k = k[mask]
+    pk = pk[mask, 0]
+    plin = jc.power.linear_matter_power(jc.Planck15(), k, a=1. / (1 + z), transfer_fn=jc.transfer.Eisenstein_Hu)
+    return jnp.nanmean(pk - plin)**2
+
+grad_loss = jax.grad(loss)
+learning_rate = 1e-5
+key, subkey = jax.random.split(key)
+w = jax.random.normal(key, (particles.shape[0],))* 0.1 + 0.5
+for _ in range(100):
+    print("Loss", loss(w))
+    grad = grad_loss(w)
+    print("Grad", grad)
+    w -= learning_rate * grad
+    print("w mean", w.mean())
+    print("w std", w.std())
+    
+
+
 
 
 
