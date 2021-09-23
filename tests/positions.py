@@ -18,7 +18,7 @@ import Pk_library as PKL
 
 
 n_bins = 64
-box_size = 2500.
+box_size = 1000.
 k_ny = jnp.pi * n_bins / box_size
 key = jax.random.PRNGKey(42)
 
@@ -35,12 +35,12 @@ z = 0.466
 
 @jax.jit
 def loss(positions):
-    xpos = particles[:,0]
-    ypos = particles[:,1]
-    zpos = particles[:,2]
-    bias = 1.#2.2
-    n_bins = 256
-    box_size = 2500.
+    xpos = positions[:,0]
+    ypos = positions[:,1]
+    zpos = positions[:,2]
+    bias = 2.2
+    n_bins = 128
+    
     k_ny = jnp.pi * n_bins / box_size
     k_edges = jnp.arange(0.003, k_ny, 0.0025)
     delta = jnp.zeros((n_bins, n_bins, n_bins))
@@ -71,19 +71,10 @@ def step(step, opt_state):
     value, grads = jax.value_and_grad(loss)(get_params(opt_state))
     opt_state = opt_update(step, grads, opt_state)
     return opt_state
-num_steps = 2000
+num_steps = 200
 s = time.time()
 print("Training...", flush=True)
-#opt_state = jax.lax.fori_loop(0, num_steps, step, opt_state)
-for i in range(num_steps):
-    
-    value, grads = jax.value_and_grad(loss)(get_params(opt_state))
-    print(value)
-    print(grads)
-    opt_state = opt_update(i, grads, opt_state)
-    
-    
-    
+opt_state = jax.lax.fori_loop(0, num_steps, step, opt_state)   
 print(f"Training took {time.time() - s} s", flush=True)
 new_pos = get_params(opt_state)
 #final_loss = loss(w).block_until_ready()
@@ -91,8 +82,7 @@ new_pos = get_params(opt_state)
 print(particles)
 print(new_pos)
 
-n_bins = 256
-box_size = 2500.
+n_bins = 128
 k_ny = jnp.pi * n_bins / box_size
 delta = jnp.zeros((n_bins, n_bins, n_bins))
 delta = cic_mas_vec(delta,
@@ -137,7 +127,7 @@ ax[0].plot(k, pk, label='Raw', ls='--')
 ax[0].format(xscale = 'log', yscale = 'log', xlabel='$k$ [$h$/Mpc]', ylabel='$P(k)$')
 ax[1].imshow(delta[:,:,:].mean(axis=2), colorbar='r')
 ax[1].format(title='Raw')
-ax[0].legend()
+ax[0].legend(loc='bottom')
 fig.savefig("plots/positions.png", dpi=300)
 
 
