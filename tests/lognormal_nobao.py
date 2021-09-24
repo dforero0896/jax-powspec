@@ -30,7 +30,7 @@ if create_data:
     print(cosmo)
     Plin = cosmology.LinearPower(cosmo, redshift, transfer='NoWiggleEisensteinHu')
     
-    cat = LogNormalCatalog(Plin=Plin, nbar=3.5e-3, BoxSize=box_size, Nmesh=350, bias=b1, seed=seed)
+    cat = LogNormalCatalog(Plin=Plin, nbar=3.5e-3, BoxSize=box_size, Nmesh=450, bias=b1, seed=seed)
     particles = cat['Position'].compute()
     np.save("data/lognormal_nobao.npy", particles)
 else:
