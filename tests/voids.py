@@ -4,6 +4,7 @@ import jax.numpy as jnp
 from jax.experimental import loops
 import sys
 sys.path.insert(0, "/home/daniel/OneDrive/Research/jax_cosmo") #Use my local jax_cosmo with correlations module
+sys.path.insert(0, "/home/astro/dforero/projects/jax_cosmo") #Use my local jax_cosmo with correlations module
 import jax_cosmo as jc
 from jax_cosmo.correlations import xicalc_trapz
 import numpy as np
