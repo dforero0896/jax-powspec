@@ -175,6 +175,9 @@ ax[3].legend(loc='bottom')
 ax[3].format(xlabel='$s$', ylabel=r'$s^2\xi$')
 fig.savefig("plots/lognormal_nobao.png", dpi=300)
 
+print("Saving corrected catalog...", flush=True)
+np.save("data/lognormal_nobao_corrected.npy", (new_pos + box_size) % box_size)
+
 
 
 
