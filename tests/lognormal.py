@@ -83,6 +83,7 @@ def loss(positions):
     plin = bias**2 * jc.power.linear_matter_power(cosmo, k, a = 1. / (1 + z), transfer_fn=jc.transfer.Eisenstein_Hu) + shot_noise
     return jnp.nanmean((jnp.log10(pk) - jnp.log10(plin))**2)
 
+
 from jax.experimental import optimizers
 key, subkey = jax.random.split(key)
 #w0 = jax.random.normal(key, (particles.shape[0],))* 0.2 + 0.4
@@ -127,17 +128,19 @@ pk = pk[mask, 0]
 s, xi, modes = xi_vec_fundamental(delta, box_size)
 mask = s < 200
 s = s[mask]
-xi = xi[mask,0]
+xi = xi[mask]
 
 bias = b1
 plin = bias**2 * jc.power.linear_matter_power(jc.Planck15(), k, a=1. / (1 + z), transfer_fn=jc.transfer.Eisenstein_Hu) + shot_noise
 
-fig, ax = pplt.subplots(nrows=2, ncols=2, sharex=False, sharey=False)
+fig, ax = pplt.subplots(nrows=2, ncols=3, sharex=False, sharey=False)
 ax[2].imshow(delta[:,:,:].mean(axis=2), colorbar='r')
 ax[2].format(title='Corrected')
 ax[0].plot(k, pk, label='Corrected')
 ax[0].plot(k, plin, label='Linear', ls=':')
-ax[3].plot(s, s**2*xi, label='Corrected')
+ax[3].plot(s, s**2*xi[:,0], label='Corrected')
+ax[4].plot(s, s**2*xi[:,1], label='Corrected')
+ax[5].plot(s, s**2*xi[:,2], label='Corrected')
 
 
 
@@ -158,14 +161,17 @@ pk = pk[mask, 0]
 s, xi, modes = xi_vec_fundamental(delta, box_size)
 mask = s < 200
 s = s[mask]
-xi = xi[mask,0]
+xi = xi[mask]
 
 ax[0].plot(k, pk, label='Log-normal', ls='--')
-ax[3].plot(s, s**2*xi, label='Log-normal', ls = '--')
+ax[3].plot(s, s**2*xi[:,0], label='Log-normal', ls = '--')
+ax[4].plot(s, s**2*xi[:,1], label='Log-normal')
+ax[5].plot(s, s**2*xi[:,2], label='Log-normal')
 klin = np.logspace(-3, 0, 2048)
 plin = bias**2 * jc.power.linear_matter_power(jc.Planck15(), klin, a=1. / (1 + z), transfer_fn=jc.transfer.Eisenstein_Hu) + shot_noise
 s, xi = xicalc_trapz(klin, plin, 2., s)
 ax[3].plot(s, s**2*xi, label='linear', ls=':')
+
 
 ax[0].format(xscale = 'log', yscale = 'log', xlabel='$k$ [$h$/Mpc]', ylabel='$P(k)$')
 ax[1].imshow(delta[:,:,:].mean(axis=2), colorbar='r')
@@ -174,6 +180,7 @@ ax[0].legend(loc='bottom')
 ax[3].legend(loc='bottom')
 ax[3].format(xlabel='$s$', ylabel=r'$s^2\xi$')
 fig.savefig("plots/lognormal.png", dpi=300)
+
 
 
 
