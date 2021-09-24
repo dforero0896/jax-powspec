@@ -34,7 +34,7 @@ def rr_analytic2d(bin_low_bound, bin_high_bound, box_size, nmu_bins=40):
 
 bins = np.linspace(1e-5, 200, 41)
 box_size = 1000.
-if not os.path.isfile("data/corrfunc_xi.npz"):
+if not os.path.isfile("data/corrfunc_xi.npz") or 1:
     data = np.load("data/lognormal_nobao_corrected.npy")
     results = DDsmu(1, 32, bins, 1., 40,
                   data[:,0], data[:,1], data[:,2],
