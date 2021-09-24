@@ -1,3 +1,5 @@
+from nbodykit.lab import *
+import numpy as np
 import time
 import jax
 import jax.numpy as jnp
@@ -17,28 +19,52 @@ import MAS_library as MASL
 import Pk_library as PKL
 
 
-
 box_size = 1000.
+redshift = 0.55
+b1 = 2.0
+seed = 5
+create_data = True
+if create_data:
+    
+    cosmo = cosmology.Planck15
+    print(cosmo)
+    Plin = cosmology.LinearPower(cosmo, redshift, transfer='EisensteinHu')
+    
+    cat = LogNormalCatalog(Plin=Plin, nbar=3.5e-3, BoxSize=box_size, Nmesh=256, bias=b1, seed=seed)
+    particles = cat['Position'].compute()
+    np.save("data/lognormal.npy", particles)
+else:
 
-key = jax.random.PRNGKey(42)
+    particles = np.load("data/lognormal.npy")
 
-n_part = 300000
+particles = jax.device_put(particles)
+cosmo = jc.Planck15()
+
+
+
+
+
+
+key = jax.random.PRNGKey(5)
+
+n_part = particles.shape[0]
 key, subkey = jax.random.split(key)
-particles = box_size * jax.random.uniform(subkey, (n_part,3))
 w = jnp.ones(particles.shape[0])
 print(n_part)
 
 
 shot_noise = box_size**3 / n_part
-z = 0.466
+
+z = redshift
+n_bins = 256
 
 @jax.jit
 def loss(positions):
     xpos = positions[:,0]
     ypos = positions[:,1]
     zpos = positions[:,2]
-    bias = 2.2
-    n_bins = 128
+    bias = b1#2.2
+    
     
     k_ny = jnp.pi * n_bins / box_size
     k_edges = jnp.arange(0.003, k_ny, 0.0025)
@@ -54,7 +80,7 @@ def loss(positions):
     delta -= 1.
     k, pk, modes = powspec_vec(delta, box_size, k_edges) 
     pk = pk[:,0]
-    plin = bias**2 * jc.power.linear_matter_power(jc.Planck15(), k, a=1. / (1 + z), transfer_fn=jc.transfer.Eisenstein_Hu)
+    plin = bias**2 * jc.power.linear_matter_power(cosmo, k, a = 1. / (1 + z), transfer_fn=jc.transfer.Eisenstein_Hu) + shot_noise
     return jnp.nanmean((jnp.log10(pk) - jnp.log10(plin))**2)
 
 from jax.experimental import optimizers
@@ -62,7 +88,7 @@ key, subkey = jax.random.split(key)
 #w0 = jax.random.normal(key, (particles.shape[0],))* 0.2 + 0.4
 
 x0 = particles
-learning_rate = 1
+learning_rate = 1.
 opt_init, opt_update, get_params = optimizers.adam(learning_rate)
 opt_state = opt_init(x0)
 @jax.jit
@@ -81,7 +107,7 @@ new_pos = get_params(opt_state)
 print(particles)
 print(new_pos)
 
-n_bins = 128
+
 k_ny = jnp.pi * n_bins / box_size
 delta = jnp.zeros((n_bins, n_bins, n_bins))
 delta = cic_mas_vec(delta,
@@ -98,14 +124,21 @@ k, pk, modes = powspec_vec_fundamental(delta, box_size)
 mask = k < k_ny
 k = k[mask]
 pk = pk[mask, 0]
-bias = 2.2
-plin = bias**2 * jc.power.linear_matter_power(jc.Planck15(), k, a=1. / (1 + z), transfer_fn=jc.transfer.Eisenstein_Hu)
+s, xi, modes = xi_vec_fundamental(delta, box_size)
+mask = s < 200
+s = s[mask]
+xi = xi[mask,0]
 
-fig, ax = pplt.subplots(nrows=1, ncols=3, sharex=False, sharey=False)
+bias = b1
+plin = bias**2 * jc.power.linear_matter_power(jc.Planck15(), k, a=1. / (1 + z), transfer_fn=jc.transfer.Eisenstein_Hu) + shot_noise
+
+fig, ax = pplt.subplots(nrows=2, ncols=2, sharex=False, sharey=False)
 ax[2].imshow(delta[:,:,:].mean(axis=2), colorbar='r')
 ax[2].format(title='Corrected')
 ax[0].plot(k, pk, label='Corrected')
-ax[0].plot(k, plin, label='linear', ls=':')
+ax[0].plot(k, plin, label='Linear', ls=':')
+ax[3].plot(s, s**2*xi, label='Corrected')
+
 
 
 delta = jnp.zeros((n_bins, n_bins, n_bins))
@@ -122,12 +155,30 @@ k, pk, modes = powspec_vec_fundamental(delta, box_size)
 mask = k < k_ny
 k = k[mask]
 pk = pk[mask, 0]
-ax[0].plot(k, pk, label='Raw', ls='--')
+s, xi, modes = xi_vec_fundamental(delta, box_size)
+mask = s < 200
+s = s[mask]
+xi = xi[mask,0]
+
+ax[0].plot(k, pk, label='Log-normal', ls='--')
+ax[3].plot(s, s**2*xi, label='Log-normal', ls = '--')
+klin = np.logspace(-3, 0, 2048)
+plin = bias**2 * jc.power.linear_matter_power(jc.Planck15(), klin, a=1. / (1 + z), transfer_fn=jc.transfer.Eisenstein_Hu) + shot_noise
+s, xi = xicalc_trapz(klin, plin, 2., s)
+ax[3].plot(s, s**2*xi, label='linear', ls=':')
+
 ax[0].format(xscale = 'log', yscale = 'log', xlabel='$k$ [$h$/Mpc]', ylabel='$P(k)$')
 ax[1].imshow(delta[:,:,:].mean(axis=2), colorbar='r')
-ax[1].format(title='Raw')
+ax[1].format(title='Log-normal')
 ax[0].legend(loc='bottom')
-fig.savefig("plots/random.png", dpi=300)
+ax[3].legend(loc='bottom')
+ax[3].format(xlabel='$s$', ylabel=r'$s^2\xi$')
+fig.savefig("plots/lognormal.png", dpi=300)
+
+
+
+
+
 
 
 
