@@ -22,7 +22,7 @@ import Pk_library as PKL
 box_size = 1000.
 redshift = 0.55
 b1 = 2.0
-seed = 42
+seed = 5
 create_data = True
 if create_data:
     
