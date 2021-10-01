@@ -345,3 +345,60 @@ def xi_vec_fundamental(delta, box_size):
 
     
     return r3D, xi3D, Nmodes3D
+@jax.jit
+def xi_vec_coords(dims, box_size, k_edges):
+    kF = 2.0*jnp.pi/box_size
+    kedges = k_edges / kF
+    r3D = 0.5 * (kedges[1:] + kedges[:-1]) * (box_size * 1.0 / dims)
+    return r3D
+
+@jax.jit
+def kaiser_power_spectrum_integration(power_spectrum, nmu_bins, bias, growth_rate):
+    
+    mu_edges = jnp.linspace(0,1,nmu_bins+1)
+    mu = 0.5 * (mu_edges[:-1] + mu_edges[1:])
+    dmu = mu[1] - mu[0]
+    kaiser_factor = (bias + growth_rate * mu**2)**2
+    mono = power_spectrum[:,None] * kaiser_factor[None, :]
+    print(mono.shape)
+    quad = (mono * (2 * 2 + 1 ) * 0.5 * (3. * mu**2 - 1.)[None,:]).sum(axis=1) * dmu
+    hexa = (mono * (2 * 4 + 1 ) * 0.125 * (35. * mu**4 - 30. * mu**2 + 3.)[None,:]).sum(axis=1) * dmu
+    mono = mono.sum(axis=1) * dmu
+    return mono, quad, hexa
+@jax.jit
+def kaiser_power_spectrum(power_spectrum, bias, growth_rate):
+
+    """Eq. 2.1 in https://arxiv.org/pdf/1610.07785.pdf"""
+    
+    beta = growth_rate / bias  
+    mono = power_spectrum * (bias**2 / 15.) * (15. + 10 * beta + 3 * beta**2)
+    quad = power_spectrum * (4. / 21) * growth_rate * (7 * bias + 3 * growth_rate)
+    hexa = power_spectrum * (8. / 35) * growth_rate**2
+    
+    return mono, quad, hexa
+@jax.jit
+def kaiser_fog_power_spectrum_integrate(power_spectrum, k, nmu_bins, bias, growth_rate, sigma):
+
+    """Check https://arxiv.org/pdf/1209.3771.pdf for expansion of the Pk and other FOG kernels"""
+    
+    mu_edges = jnp.linspace(0,1,nmu_bins+1)
+    mu = 0.5 * (mu_edges[:-1] + mu_edges[1:])
+    kaiser_factor = (bias + growth_rate * mu**2)**2
+    mono = power_spectrum[:,None] * kaiser_factor[None, :] * jnp.exp(-k[:,None]**2 * mu[None,:]**2 * sigma**2)
+    quad = (mono * (2 * 2 + 1 ) * 0.5 * (3. * mu**2 - 1.)[None,:]).sum(axis=1)
+    hexa = (mono * (2 * 4 + 1 ) * 0.125 * (35. * mu**4 - 30. * mu**2 + 2.)[None,:]).sum(axis=1)
+    mono = mono.sum(axis=1)
+    return mono, quad, hexa
+
+"""
+def multipoles_from_1d(isotropic, nmu_bins):
+    print("WARNING: This approach does not seem correct.\nTODO: Implement 2D correlations.")
+    mu_edges = jnp.linspace(0,1,nmu_bins+1)
+    mu = 0.5 * (mu_edges[:-1] + mu_edges[1:])
+    mono = isotropic[:,None] / (nmu_bins*jnp.ones(nmu_bins)[None,:])
+    quad = - (mono * (2 * 2 + 1 ) * 0.5 * (3. * mu**2 - 1.)[None,:]).sum(axis=1)
+    hexa = - (mono * (2 * 4 + 1 ) * 0.125 * (35. * mu**4 - 30. * mu**2 + 2.)[None,:]).sum(axis=1)
+    
+    return isotropic, quad, hexa
+"""
+

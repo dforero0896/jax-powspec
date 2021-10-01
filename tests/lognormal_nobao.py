@@ -23,7 +23,7 @@ box_size = 1000.
 redshift = 0.55
 b1 = 2.0
 seed = 5
-create_data = True
+create_data = False
 if create_data:
     
     cosmo = cosmology.Planck15
@@ -79,9 +79,8 @@ def loss(positions):
     delta /= delta.mean()
     delta -= 1.
     k, pk, modes = powspec_vec(delta, box_size, k_edges) 
-    pk = pk[:,0]
     plin = bias**2 * jc.power.linear_matter_power(cosmo, k, a = 1. / (1 + z), transfer_fn=jc.transfer.Eisenstein_Hu) + shot_noise
-    return jnp.nanmean((jnp.log10(pk) - jnp.log10(plin))**2)
+    return jnp.nanmean((jnp.log10(pk[:,0]) - jnp.log10(plin))**2) #+ jnp.nanmean(jnp.abs(pk[:,1])) * 1e-2# + jnp.nanmean(jnp.abs(pk[:,1])) * 1e-4
 
 from jax.experimental import optimizers
 key, subkey = jax.random.split(key)
@@ -96,7 +95,7 @@ def step(step, opt_state):
     value, grads = jax.value_and_grad(loss)(get_params(opt_state))
     opt_state = opt_update(step, grads, opt_state)
     return opt_state
-num_steps = 200
+num_steps = 400
 s = time.time()
 print("Training...", flush=True)
 opt_state = jax.lax.fori_loop(0, num_steps, step, opt_state)   
@@ -180,8 +179,8 @@ ax[3].legend(loc='bottom')
 ax[3].format(xlabel='$s$', ylabel=r'$s^2\xi$')
 fig.savefig("plots/lognormal_nobao.png", dpi=300)
 
-print("Saving corrected catalog...", flush=True)
-np.save("data/lognormal_nobao_corrected.npy", (new_pos + box_size) % box_size)
+#print("Saving corrected catalog...", flush=True)
+#np.save("data/lognormal_nobao_corrected.npy", (new_pos + box_size) % box_size)
 
 
 
