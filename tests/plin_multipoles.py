@@ -25,17 +25,15 @@ ax[0].plot(s, s**2*xi0, label='linear')
 #ax[1].plot(s, s**2*xi2, label='linear')
 #ax[2].plot(s, s**2*xi4, label='linear')
 
+
+
 pk0, pk2, pk4 = kaiser_power_spectrum(plin, bias, growth_rate)
 ax[3].plot(klin, klin*pk0, label='kaiser mult', ls='-')
 ax[4].plot(klin, klin*pk2, label='kaiser mult', ls='-')
 ax[5].plot(klin, klin*pk4, label='kaiser mult', ls='-')
 
-pk0, pk2, pk4 = kaiser_power_spectrum_integration(plin, 40, bias, growth_rate)
-ax[3].plot(klin, klin*pk0, label='1d to mult 40', ls=':')
-ax[4].plot(klin, klin*pk2, label='1d to mult 40', ls=':')
-ax[5].plot(klin, klin*pk4, label='1d to mult 40', ls=':')
-
-pk0, pk2, pk4 = kaiser_power_spectrum_integration(plin, 2048, bias, growth_rate)
+mu_edges = jnp.linspace(0,1,2048+1)
+pk0, pk2, pk4 = kaiser_power_spectrum_integration(plin, mu_edges, bias, growth_rate)
 ax[3].plot(klin, klin*pk0, label='1d to mult 2048', ls='--')
 ax[4].plot(klin, klin*pk2, label='1d to mult 2048', ls='--')
 ax[5].plot(klin, klin*pk4, label='1d to mult 2048', ls='--')

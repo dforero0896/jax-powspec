@@ -353,9 +353,9 @@ def xi_vec_coords(dims, box_size, k_edges):
     return r3D
 
 @jax.jit
-def kaiser_power_spectrum_integration(power_spectrum, nmu_bins, bias, growth_rate):
+def kaiser_power_spectrum_integration(power_spectrum, mu_edges, bias, growth_rate):
     
-    mu_edges = jnp.linspace(0,1,nmu_bins+1)
+    
     mu = 0.5 * (mu_edges[:-1] + mu_edges[1:])
     dmu = mu[1] - mu[0]
     kaiser_factor = (bias + growth_rate * mu**2)**2
@@ -377,11 +377,11 @@ def kaiser_power_spectrum(power_spectrum, bias, growth_rate):
     
     return mono, quad, hexa
 @jax.jit
-def kaiser_fog_power_spectrum_integrate(power_spectrum, k, nmu_bins, bias, growth_rate, sigma):
+def kaiser_fog_power_spectrum_integrate(power_spectrum, k, mu_edges, bias, growth_rate, sigma):
 
     """Check https://arxiv.org/pdf/1209.3771.pdf for expansion of the Pk and other FOG kernels"""
     
-    mu_edges = jnp.linspace(0,1,nmu_bins+1)
+    
     mu = 0.5 * (mu_edges[:-1] + mu_edges[1:])
     kaiser_factor = (bias + growth_rate * mu**2)**2
     mono = power_spectrum[:,None] * kaiser_factor[None, :] * jnp.exp(-k[:,None]**2 * mu[None,:]**2 * sigma**2)
