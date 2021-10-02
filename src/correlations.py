@@ -353,6 +353,11 @@ def xi_vec_coords(dims, box_size, k_edges):
     return r3D
 
 @jax.jit
+def s_edges_conv(dims, box_size, s_edges):
+    kF = 2.0*jnp.pi/box_size
+    return kF * s_edges * dims / box_size
+
+@jax.jit
 def kaiser_power_spectrum_integration(power_spectrum, mu_edges, bias, growth_rate):
     
     
