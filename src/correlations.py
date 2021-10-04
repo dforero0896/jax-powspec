@@ -395,6 +395,28 @@ def kaiser_fog_power_spectrum_integrate(power_spectrum, k, mu_edges, bias, growt
     mono = mono.sum(axis=1)
     return mono, quad, hexa
 
+@jax.jit
+def estimate_pk_variance(k, pk, box_size, shot_noise, dk):
+    """
+    Must use linear k bins.
+    Eq. 17 in https://arxiv.org/pdf/2109.15236.pdf
+    """
+    return (2*jnp.pi)**3 / box_size**3 * (2 * (pk + shot_noise)**2 / (4*jnp.pi*k**2 * dk))
+@jax.jit
+def estimate_xi_covariance(s, k, pk, a_damp, pk_variance, dk):
+    """
+    Estimation of xi covariance from estimation ov Pk variance.
+    TODO: Add function to estimate from covariance instead.
+    """
+    ks = k[:,None] * s[None,:]
+    damp = jnp.exp(-k**2*a_damp**2)
+    j0 = jnp.sin(ks) / ks
+    j0sq = jnp.einsum('ia,ib->iab', j0, j0)
+    print(j0sq.shape)
+    factor = dk**2 * k**4 * pk_variance * damp**2 / (2*jnp.pi**2)**2
+    cov_conf = (factor[:,None,None] * j0sq).sum(axis=0)
+    return cov_conf
+
 """
 def multipoles_from_1d(isotropic, nmu_bins):
     print("WARNING: This approach does not seem correct.\nTODO: Implement 2D correlations.")
