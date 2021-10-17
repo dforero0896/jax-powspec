@@ -124,7 +124,7 @@ bias = 2.2
 plin = bias**2 * jc.power.linear_matter_power(jc.Planck15(), k, a=1. / (1 + z), transfer_fn=jc.transfer.Eisenstein_Hu)
 
 fig, ax = pplt.subplots(nrows=2, ncols=3, sharex=False, sharey=False)
-ax[2].imshow(delta[:,:,:].mean(axis=2), colorbar='r')
+ax[2].imshow(delta[:,:,:].mean(axis=2), colorbar='r', vmin=-1, vmax=1)
 ax[2].format(title='Corrected')
 ax[0].plot(k, pk, label='Corrected')
 ax[0].plot(k, plin, label='linear', ls=':')
@@ -149,7 +149,7 @@ k = k[mask]
 pk = pk[mask, 0]
 ax[0].plot(k, pk, label='Raw', ls='--')
 ax[0].format(xscale = 'log', yscale = 'log', xlabel='$k$ [$h$/Mpc]', ylabel='$P(k)$')
-ax[1].imshow(delta[:,:,:].mean(axis=2), colorbar='r')
+ax[1].imshow(delta[:,:,:].mean(axis=2), colorbar='r', vmin=-1, vmax=1)
 ax[1].format(title='Raw')
 
 
@@ -160,7 +160,7 @@ k = k[mask]
 pk = pk[mask, 0]
 ax[0].plot(k, pk, label='Void', ls='--')
 ax[0].format(xscale = 'log', yscale = 'log', xlabel='$k$ [$h$/Mpc]', ylabel='$P(k)$')
-ax[3].imshow(delta_v[:,:,:].mean(axis=2), colorbar='r')
+ax[3].imshow(delta_v[:,:,:].mean(axis=2), colorbar='r', vmin=-1, vmax=1)
 ax[3].format(title='Void')
 ax[0].legend(loc='bottom')
 

@@ -405,7 +405,7 @@ def estimate_pk_variance(k, pk, box_size, shot_noise, dk):
 @jax.jit
 def estimate_xi_covariance(s, k, pk, a_damp, pk_variance, dk):
     """
-    Estimation of xi covariance from estimation ov Pk variance.
+    Estimation of xi covariance from estimation of Pk variance.
     TODO: Add function to estimate from covariance instead.
     """
     ks = k[:,None] * s[None,:]
@@ -414,7 +414,7 @@ def estimate_xi_covariance(s, k, pk, a_damp, pk_variance, dk):
     j0sq = jnp.einsum('ia,ib->iab', j0, j0)
     print(j0sq.shape)
     factor = dk**2 * k**4 * pk_variance * damp**2 / (2*jnp.pi**2)**2
-    cov_conf = (factor[:,None,None] * j0sq).sum(axis=0)
+    cov_conf = jnp.nansum(factor[:,None,None] * j0sq, axis=0)
     return cov_conf
 
 """
