@@ -16,7 +16,7 @@ import MAS_library as MASL
 import Pk_library as PKL
 
 
-n_bins = 300
+n_bins = 256
 n_part = 1000
 box_size = 2500.
 k_ny = jnp.pi * n_bins / box_size
@@ -90,21 +90,22 @@ mask = CF.r3D < 200
 r = CF.r3D[mask]
 xi = CF.xi[mask]
 ax[3].plot(r, r**2*xi[:,0], label='Pylians', ls = '--')
-
-r, xi, modes = xi_vec(delta, box_size, kedges) 
-#r, xi, modes = xi_vec_fundamental(delta, box_size) 
+s_edges = jnp.linspace(0, 200, 41)
+r, xi, modes = xi_vec(delta, box_size, s_edges) 
+ax[3].plot(r, r**2*xi[:,0], label='vector')
+r, xi, modes = xi_vec_fundamental(delta, box_size) 
 mask = r < 200
 r = r[mask]
 xi = xi[mask]
-ax[3].plot(r, r**2*xi[:,0], label='vector')
+ax[3].plot(r, r**2*xi[:,0], label='fund.')
 
 z = 0.466
 klin = np.logspace(-3, 0, 2048)
 plin = jc.power.linear_matter_power(jc.Planck15(), klin, a=1. / (1 + z), transfer_fn=jc.transfer.Eisenstein_Hu)
 ax[2].plot(klin, plin, label='linear')
 ax[2].legend(loc='ll')
-r, xi = xicalc_trapz(klin, plin, 2., r)
-ax[3].plot(r, r**2*xi, label='linear')
+r, xi0, xi2, xi4 = xicalc_trapz(klin, plin, 2., r)
+ax[3].plot(r, r**2*xi0, label='linear')
 ax[3].legend()
 ax[3].format(xlabel='$s$ [Mpc / $h$]', ylabel=r'$s^2\xi$')#, yscale='symlog')
 ax[0].format(title='$\delta(x)$')

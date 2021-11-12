@@ -207,11 +207,12 @@ def powspec_vec_fundamental(delta, box_size):
     
     
 @jax.jit
-def xi_vec(delta, box_size, k_edges):
+def xi_vec(delta, box_size, s_edges):
 
     dims = delta.shape[0]
     middle = dims // 2
     kF = 2.0*jnp.pi/box_size
+    k_edges =  kF * s_edges * dims / box_size
     kN = middle*kF
     kmax_par = middle
     prefact = jnp.pi / dims
@@ -248,7 +249,7 @@ def xi_vec(delta, box_size, k_edges):
     kz = jnp.broadcast_to(ki[None, None, :], (dims, dims, dims))
     
     k = jnp.sqrt(kx**2 + ky**2 + kz**2)
-    k_index = jnp.int32(k)
+    #k_index = jnp.int32(k)
         
     k_par = kz
     mu = k_par / k
