@@ -418,15 +418,126 @@ def estimate_xi_covariance(s, k, pk, a_damp, pk_variance, dk):
     cov_conf = jnp.nansum(factor[:,None,None] * j0sq, axis=0)
     return cov_conf
 
-"""
-def multipoles_from_1d(isotropic, nmu_bins):
-    print("WARNING: This approach does not seem correct.\nTODO: Implement 2D correlations.")
-    mu_edges = jnp.linspace(0,1,nmu_bins+1)
-    mu = 0.5 * (mu_edges[:-1] + mu_edges[1:])
-    mono = isotropic[:,None] / (nmu_bins*jnp.ones(nmu_bins)[None,:])
-    quad = - (mono * (2 * 2 + 1 ) * 0.5 * (3. * mu**2 - 1.)[None,:]).sum(axis=1)
-    hexa = - (mono * (2 * 4 + 1 ) * 0.125 * (35. * mu**4 - 30. * mu**2 + 2.)[None,:]).sum(axis=1)
+@jax.jit
+def bispec(delta, box_size, k1, k2, theta):
+
+    dims = delta.shape[0]
+    middle = dims // 2
+    dims2 = dims**2
+    kF = 2.0*jnp.pi/box_size
+    kN = middle*kF
+    kmax_par = middle
+    prefact = jnp.pi / dims
+    kmax_per = jnp.int32(jnp.sqrt(middle**2 + middle**2))
+    kmax     = jnp.int32(jnp.sqrt(middle**2 + middle**2 + middle**2))
+
+    bins = theta.shape[0]
+    bins      = theta.shape[0]
+    k_all     = jnp.zeros(bins+2)
+    Pk        = jnp.zeros(bins+2)
+    k3        = jnp.sqrt((k2*jnp.sin(theta))**2 + (k2*jnp.cos(theta)+k1)**2)
+    k_all = jax.ops.index_update(k_all, 0, k1)
+    k_all = jax.ops.index_update(k_all, 1, k2)
+    k_all = jax.ops.index_update(k_all, jax.ops.index[2:], k3)
+    k_min = (k_all - kF) / kF
+    k_max = (k_all + kF) / kF
     
-    return isotropic, quad, hexa
-"""
+    def cic_correction(x, index):
+        return (1. / jnp.sinc(x/jnp.pi))**index
+    delta_k = jnp.fft.rfftn(delta, axes = (0,1,2))
+    dims_range = jnp.arange(dims)
+    
+    ki = jnp.where(dims_range > middle, dims_range - dims, dims_range)
+    
+
+    
+    kx = jnp.broadcast_to(ki[:, None, None], (dims, dims, middle+1))
+    ky = jnp.broadcast_to(ki[None, :, None], (dims, dims, middle+1))
+    kz = jnp.broadcast_to(ki[None, None, :middle+1], (dims, dims, middle+1))
+    correction_function = cic_correction(prefact * kx, 2.) * cic_correction(prefact * ky, 2.) * cic_correction(prefact * kz, 2.)
+    delta_k *= correction_function
+    k = jnp.sqrt(kx**2 + ky**2 + kz**2)
+    k_index = jnp.int32(k)
+    
+
+    #ID = dims2*kxx + dims*kyy + kzz
+    id_mask = jnp.logical_and(k[:,:,:,None] >= k_min[None, None, None, :], k[:,:,:,None] < k_max[None, None, None, :])
+    
+    delta1_k = jnp.where(id_mask[:,:,:,0], delta_k, 0.)
+    I1_k = jnp.where(id_mask[:,:,:,0], 1., 0.)
+
+    delta1 = jnp.fft.irfftn(delta1_k, delta.shape)
+    I1 = jnp.fft.irfftn(I1_k, delta.shape)
+
+    del delta1_k; del I1_k
+
+
+    # Compute Pk(k1)
+    Pk = jax.ops.index_update(Pk, 0, 0.)
+    pairs = 0.
+    Pk = jax.ops.index_add(Pk, 0, jnp.nansum(delta1**2))
+    pairs += (I1**2).sum()
+    
+    Pk = jax.ops.index_update(Pk, 0, (Pk[0] / pairs) * (box_size / dims**2)**3)
+    
+
+    # Fill delta2_k array and compute delta2
+
+    delta2_k = jnp.where(id_mask[:,:,:,1], delta_k, 0.)
+    I2_k = jnp.where(id_mask[:,:,:,1], 1., 0.)
+
+    delta2 = jnp.fft.irfftn(delta2_k, delta.shape)
+    I2 = jnp.fft.irfftn(I2_k, delta.shape)
+
+    del delta2_k; del I2_k
+    
+    
+    # Compute Pk(k2)
+    Pk = jax.ops.index_update(Pk, 1, 0.)
+    pairs = 0.
+    Pk = jax.ops.index_add(Pk, 1, jnp.nansum(delta2**2))
+    pairs += (I2**2).sum()
+    
+
+    Pk = jax.ops.index_update(Pk, 1, (Pk[1] / pairs) * (box_size / dims**2)**3)
+    
+
+    def scan_func(carry, x):
+        # x is the iteration index
+        id_mask, delta_k, box_size, Pk, delta1, delta2, I1, I2 = carry
+        dims = delta_k.shape[0]
+        delta3_k = jnp.where(id_mask[:,:,:,x+2], delta_k, 0.)
+        I3_k = jnp.where(id_mask[:,:,:,x+2], 1., 0.)
+
+        delta3 = jnp.fft.irfftn(delta3_k, (dims, dims, dims))
+        I3 = jnp.fft.irfftn(I3_k, (dims, dims, dims))
+
+        del delta3_k; del I3_k
+
+        Pk_val = 0.
+        pairs = 0.
+        Pk_val += jnp.nansum(delta3**2)
+        pairs += jnp.nansum(I3**2)
+
+        Pk_val = (Pk_val / pairs) * (box_size / dims**2)**3
+        Pk = jax.ops.index_update(Pk, x+2, Pk_val)
+
+        B_val = 0.
+        triangles = 0.
+        B_val += jnp.nansum(delta1*delta2*delta3)
+        triangles += (I1*I2*I3).sum()
+
+        B_val = (B_val / triangles) * (box_size**2 / dims**3)**3
+        Q_val = B_val / (Pk[0] * Pk[1] + Pk[0] * Pk_val + Pk[1] * Pk_val)
+
+
+        return carry, jnp.array((Pk_val, B_val, Q_val))
+    xs = jnp.arange(0, bins, 1)
+    _, PBQ = jax.lax.scan(scan_func, (id_mask, delta_k, box_size, Pk, delta1, delta2, I1, I2), xs)
+
+    
+    Pk = jax.ops.index_update(Pk, jax.ops.index[2:], PBQ[:,0])
+    
+    return k_all, Pk, theta, PBQ[:,1], PBQ[:,2]
+
 

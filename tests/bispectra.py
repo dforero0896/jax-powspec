@@ -1,4 +1,6 @@
 import numpy as np
+import matplotlib as mpl
+mpl.use("Agg")
 import proplot as pplt
 import MAS_library as MASL
 import Pk_library as PKL
@@ -9,8 +11,8 @@ BoxSize = 1000.0 #Mpc/h ; size of box
 MAS     = 'CIC'  #mass-assigment scheme
 verbose = True   #print information on progress
 
-k1      = 0.2    #h/Mpc
-k2      = 0.4    #h/Mpc
+k1      = 0.1    #h/Mpc
+k2      = 0.2    #h/Mpc
 theta   = np.linspace(0, np.pi, 50) #array with the angles between k1 and k2
 threads = 8
 

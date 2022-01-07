@@ -42,7 +42,7 @@ def loss(positions):
     n_bins = 128
     
     k_ny = jnp.pi * n_bins / box_size
-    k_edges = jnp.arange(0.003, k_ny, 0.0025)
+    k_edges = jnp.arange(0.001, k_ny, 0.005)
     delta = jnp.zeros((n_bins, n_bins, n_bins))
     delta = cic_mas_vec(delta,
                 xpos, ypos, zpos, w, 

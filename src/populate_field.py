@@ -26,22 +26,43 @@ def populate_field(rho, n_bins, box_size, key):
 
 
 
-def ezmock(params, rho, n_bins, box_size, key):
+def ezmock(params, rho, n_bins, box_size, hubble, growth_rate, displacement_potential, key):
 
-    rho_low, rho_high, lamda = params
+    rho_low, rho_sat = params
+    lamda = 10.
      
     
-    rho = jnp.clip(rho, 0, rho_high)
+    rho = jnp.clip(rho, 0, rho_sat)
     rho - jnp.where(rho < rho_low, 0., rho)
     key, subkey = jax.random.split(key)
     G = jax.random.normal(subkey, rho.shape) * lamda
     G = jnp.where(G >= 0, 1 + G, jnp.exp(G))
-    rho = rho * G
+    rho *= G
+
+    # Apply RSD
+
+    
     
 
 
     positions = populate_field(rho, n_bins, box_size, key)
     return positions
+
+
+
+def zeldovich_rsd_parallel(delta, bias, f, smooth=10.):
+    beta = f / bias
+    k = jnp.fft.fftfreq(grid, d=BoxSize/grid) * 2 * np.pi
+    kr = k * smooth
+    norm = jnp.exp(-0.5 * (kr[:, None, None] ** 2 + kr[None, :, None] ** 2 + kr[None, None, :grid//2+1] ** 2))
+    ksq = k[:,None,None]**2 + k[None,:,None]**2 + k[None,None,:grid//2+1]**2
+    delta_displaced = delta.copy() 
+    phi_field = jnp.fft.rfftn(delta_displaced) * norm / ksq # Eq. 24 https://arxiv.org/pdf/1504.02591.pdf
+    phi_field[0,0,0] = 0.
+    los = jnp.array([0,0,1])
+    displacement = k[None,None,:grid//2+1]**2 * phi_field #Eq. 25 plane-parallel approx
+    delta_displaced -= beta * jnp.fft.irfftn(displacement, delta.shape)
+    return delta_displaced
     
     
 
