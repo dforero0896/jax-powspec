@@ -51,7 +51,7 @@ delta -= 1.
 print(f"MAS took {time.time() - s} s.", flush=True)
 
 k1, k2 = 0.1, 0.2
-theta = jnp.linspace(0, jnp.pi, 50)
+theta = jnp.linspace(0, jnp.pi, 20)
 s = time.time()
 k_all, Pk, theta, B, Q = bispec(delta, box_size, k1, k2, theta)
 print(f"compile + bispectrum took {time.time() - s} s.", flush=True)
@@ -79,7 +79,7 @@ plin = np.array(b1**2 * jc.power.linear_matter_power(jc.Planck15(), klin, a=1. /
 
 
 theta_theory, Bk_theory = PKL.Bispectrum_theory(klin, plin, k1, k2)
-
+print(theta_theory.shape)
 ax[0].plot(theta_theory, Bk_theory)
 
 ax[0].format(xlabel=r'$\theta$', ylabel=r'$B(\theta)$', yscale='log')
