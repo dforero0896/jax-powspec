@@ -71,6 +71,17 @@ delta /= np.mean(delta, dtype=np.float64);  delta -= 1.0
 BBk = PKL.Bk(delta, box_size, k1, k2, theta, MAS, 16)
 ax[0].plot(theta, BBk.B, label=f'Pylians3', ls='--')
 ax[1].plot(theta, BBk.Q, label=f'Pylians3', ls='--')
+
+b1 = 2.2
+redshift = 0.466
+klin = np.logspace(-3, 0, 2048)
+plin = np.array(b1**2 * jc.power.linear_matter_power(jc.Planck15(), klin, a=1. / (1 + redshift), transfer_fn=jc.transfer.Eisenstein_Hu))
+
+
+theta_theory, Bk_theory = PKL.Bispectrum_theory(klin, plin, k1, k2)
+
+ax[0].plot(theta_theory, Bk_theory)
+
 ax[0].format(xlabel=r'$\theta$', ylabel=r'$B(\theta)$', yscale='log')
 ax[1].format(xlabel=r'$\theta$', ylabel=r'$Q(\theta)$', yscale='linear')
 ax.legend()
