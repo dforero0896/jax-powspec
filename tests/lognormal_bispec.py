@@ -88,8 +88,8 @@ def loss(positions):
     plin = jnp.interp(k, klin, plin_i) + shot_noise
     
     
-    mono_loss = jnp.nanmean((jnp.log10(pk[:,0]) - jnp.log10(plin))**2)
-    #mono_loss = jnp.nanmean((pk[:,0] - plin)**2)
+    #mono_loss = jnp.nanmean((jnp.log10(pk[:,0]) - jnp.log10(plin))**2)
+    mono_loss = jnp.nanmean((pk[:,0] - plin)**2)
     quad_loss = jnp.nanmean(pk[:,1]**2)
 
 
@@ -114,7 +114,7 @@ def step(step, opt_state):
     value, grads = jax.value_and_grad(loss)(get_params(opt_state))
     opt_state = opt_update(step, grads, opt_state)
     return opt_state
-num_steps = 300
+num_steps = 100
 s = time.time()
 print("Training...", flush=True)
 opt_state = jax.lax.fori_loop(0, num_steps, step, opt_state)   
@@ -152,7 +152,7 @@ plin = bias**2 * jc.power.linear_matter_power(jc.Planck15(), k, a=1. / (1 + z), 
 fig, ax = pplt.subplots(nrows=3, ncols=3, sharex=False, sharey=False)
 ax[6].imshow(delta[:,:,:].mean(axis=2), colorbar='r')
 ax[6].format(title='Corrected')
-ax[0].plot(k, k*pk[:,0], label='Corrected')
+ax[0].plot(k, pk[:,0], label='Corrected')
 ax[1].plot(k, k*pk[:,1], label='Corrected')
 ax[2].plot(k, k*pk[:,2], label='Corrected')
 
@@ -211,6 +211,7 @@ ax[7].imshow(delta[:,:,:].mean(axis=2), colorbar='r')
 ax[7].format(title='Log-normal')
 ax[0].legend(loc='bottom')
 ax[3].legend(loc='bottom')
+ax[8].legend(loc='bottom')
 ax[3].format(xlabel='$s$', ylabel=r'$s^2\xi$')
 fig.savefig("plots/lognormal_bispec.png", dpi=300)
 
