@@ -5,9 +5,9 @@ import jax
 import jax.numpy as jnp
 from jax.experimental import loops
 import sys
-#sys.path.insert(0, "/home/daniel/OneDrive/Research/jax_cosmo") #Use my local jax_cosmo with correlations module
+sys.path.insert(0, "/home/astro/dforero/projects/jax_cosmo") #Use my local jax_cosmo with correlations module
 import jax_cosmo as jc
-#from jax_cosmo.correlations import xicalc_trapz
+from jax_cosmo.correlations import xicalc_trapz
 import numpy as np
 
 import proplot as pplt
@@ -89,12 +89,14 @@ def loss(positions):
     
     
     mono_loss = jnp.nanmean((jnp.log10(pk[:,0]) - jnp.log10(plin))**2)
+    #mono_loss = jnp.nanmean((pk[:,0] - plin)**2)
     quad_loss = jnp.nanmean(pk[:,1]**2)
 
 
     _, _, _, B, Q = bispec(delta, box_size, k1, k2, theta)
 
-    bispec_loss = jnp.nanmean((B - jnp.interp(theta, theta_theory, Bk_i))**2)
+    bispec_loss = 1e-8 * jnp.nanmean((B - jnp.interp(theta, theta_theory, Bk_i))**2)
+    
     #return mono_loss #+ 0.01 * quad_loss + 0.01 * hexa_loss
     return mono_loss + bispec_loss
 
@@ -112,7 +114,7 @@ def step(step, opt_state):
     value, grads = jax.value_and_grad(loss)(get_params(opt_state))
     opt_state = opt_update(step, grads, opt_state)
     return opt_state
-num_steps = 2
+num_steps = 300
 s = time.time()
 print("Training...", flush=True)
 opt_state = jax.lax.fori_loop(0, num_steps, step, opt_state)   
@@ -150,7 +152,7 @@ plin = bias**2 * jc.power.linear_matter_power(jc.Planck15(), k, a=1. / (1 + z), 
 fig, ax = pplt.subplots(nrows=3, ncols=3, sharex=False, sharey=False)
 ax[6].imshow(delta[:,:,:].mean(axis=2), colorbar='r')
 ax[6].format(title='Corrected')
-ax[0].plot(k, pk[:,0], label='Corrected')
+ax[0].plot(k, k*pk[:,0], label='Corrected')
 ax[1].plot(k, k*pk[:,1], label='Corrected')
 ax[2].plot(k, k*pk[:,2], label='Corrected')
 
@@ -191,7 +193,11 @@ ax[5].plot(s, s**2*xi[:,2], label='Log-normal')
 ax[8].plot(theta, B, label='Log-normal')
 
 plin = bias**2 * jc.power.linear_matter_power(jc.Planck15(), klin, a=1. / (1 + z), transfer_fn=jc.transfer.Eisenstein_Hu) + shot_noise
+s, xi0, xi2, xi4 = xicalc_trapz(klin, plin, 2., s)
 
+ax[3].plot(s, s**2*xi0, label='linear', ls=':')
+ax[4].plot(s, s**2*xi2, label='linear', ls=':')
+ax[5].plot(s, s**2*xi4, label='linear', ls=':')
 
 
 
