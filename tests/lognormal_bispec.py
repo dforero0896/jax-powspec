@@ -114,7 +114,7 @@ def step(step, opt_state):
     value, grads = jax.value_and_grad(loss)(get_params(opt_state))
     opt_state = opt_update(step, grads, opt_state)
     return opt_state
-num_steps = 100
+num_steps = 300
 s = time.time()
 print("Training...", flush=True)
 opt_state = jax.lax.fori_loop(0, num_steps, step, opt_state)   
