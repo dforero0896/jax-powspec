@@ -16,7 +16,7 @@ from src.correlations import compute_all_correlations
 
 
 n_bins = 256
-box_size = 2500.
+box_size = 1000.
 key = jax.random.PRNGKey(42)
 key, subkey = jax.random.split(key)
 
@@ -48,7 +48,7 @@ print(f"MAS took {time.time() - s} s.", flush=True)
 
 k1, k2 = 0.1, 0.2
 theta = jnp.linspace(0, jnp.pi, 20)
-s_edges = jnp.arange(1e-3, 200, 2)
+s_edges = jnp.arange(1e-3, 200, 5)
 k_edges = jnp.arange(5e-3, 1, 2 * jnp.pi / box_size)
 s = time.time()
 k3D, Pk3D, Nmodes3D_pk, r3D, xi3D, Nmodes3D_xi, k_all, Pk, theta, B, Q = compute_all_correlations(delta, box_size, s_edges, k_edges, k1, k2, theta)
