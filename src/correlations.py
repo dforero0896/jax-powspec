@@ -713,3 +713,78 @@ def compute_all_correlations(delta, box_size, s_edges, k_edges, k1, k2, theta):
     return k3D, Pk3D, Nmodes3D_pk, r3D, xi3D, Nmodes3D_xi, k_all, Pk, theta, PBQ[:,1], PBQ[:,2]
 
 
+@jax.jit
+def compute_2pt_correlations(delta, box_size, s_edges, k_edges):
+
+    dims = delta.shape[0]
+    middle = dims // 2
+    dims2 = dims**2
+    kF = 2.0*jnp.pi/box_size
+    kN = middle*kF
+    kmax_par = middle
+    prefact = jnp.pi / dims
+    kmax_per = jnp.int32(jnp.sqrt(middle**2 + middle**2))
+    kmax     = jnp.int32(jnp.sqrt(middle**2 + middle**2 + middle**2))
+
+    
+    def cic_correction(x, index):
+        return (1. / jnp.sinc(x/jnp.pi))**index
+    delta_k = jnp.fft.rfftn(delta, axes = (0,1,2))
+    dims_range = jnp.arange(dims)
+    
+    ki = jnp.where(dims_range > middle, dims_range - dims, dims_range)
+    
+
+    
+    kx = jnp.broadcast_to(ki[:, None, None], (dims, dims, middle+1))
+    ky = jnp.broadcast_to(ki[None, :, None], (dims, dims, middle+1))
+    kz = jnp.broadcast_to(ki[None, None, :middle+1], (dims, dims, middle+1))
+    delta_k *= cic_correction(prefact * kx, 2.) * cic_correction(prefact * ky, 2.) * cic_correction(prefact * kz, 2.)
+    k = jnp.sqrt(kx**2 + ky**2 + kz**2)
+    k_index = jnp.int32(k)
+
+
+    k_par = kz
+    mu = jnp.where(k == 0., 0., k_par / k)
+    mu2 = (mu**2).flatten()
+    delta2 = (delta_k * delta_k.conj()).real
+      
+    kedges = k_edges / kF
+    
+    
+    Pk3D_mono, _ = jnp.histogram(k.flatten(), bins = kedges, weights = delta2.flatten())
+    Pk3D_quad, _ = jnp.histogram(k.flatten(), bins = kedges, weights = delta2.flatten() * (3.0*mu2-1.0)/2.0)
+    Pk3D_hexa, _ = jnp.histogram(k.flatten(), bins = kedges, weights = delta2.flatten() * (35.0*mu2*mu2 - 30.0*mu2 + 3.0)/8.0)
+    Nmodes3D_pk, _ = jnp.histogram(k.flatten(), bins = kedges)
+    Pk3D     = jnp.zeros((Pk3D_mono.shape[0], 3), dtype=jnp.float32)
+    Pk3D = jax.ops.index_update(Pk3D, jax.ops.index[:,0], Pk3D_mono/Nmodes3D_pk * (box_size/dims**2)**3)
+    Pk3D = jax.ops.index_update(Pk3D, jax.ops.index[:,1], Pk3D_quad/Nmodes3D_pk * 5. * (box_size/dims**2)**3)
+    Pk3D = jax.ops.index_update(Pk3D, jax.ops.index[:,2], Pk3D_hexa/Nmodes3D_pk * 9. * (box_size/dims**2)**3)
+    k3D = 0.5 * (kedges[1:] + kedges[:-1]) * kF
+
+    kx = jnp.broadcast_to(ki[:, None, None], (dims, dims, dims))
+    ky = jnp.broadcast_to(ki[None, :, None], (dims, dims, dims))
+    kz = jnp.broadcast_to(ki[None, None, :], (dims, dims, dims))
+    k = jnp.sqrt(kx**2 + ky**2 + kz**2)        
+    k_par = kz
+    mu = jnp.where(k == 0., 0., k_par / k)
+    mu2 = (mu**2).flatten()
+    
+    delta_xi = jnp.fft.irfftn(delta2, delta.shape) 
+    k_edges =  kF * s_edges * dims / box_size
+    kedges = k_edges / kF
+
+    xi3D_mono, _ = jnp.histogram(k.flatten(), bins = kedges, weights = delta_xi.flatten())
+    xi3D_quad, _ = jnp.histogram(k.flatten(), bins = kedges, weights = delta_xi.flatten() * (3.0*mu2-1.0)/2.0)
+    xi3D_hexa, _ = jnp.histogram(k.flatten(), bins = kedges, weights = delta_xi.flatten() * (35.0*mu2*mu2 - 30.0*mu2 + 3.0)/8.0)
+    Nmodes3D_xi, _ = jnp.histogram(k.flatten(), bins = kedges)
+    Nmodes3D_xi = jnp.where(Nmodes3D_xi == 0., jnp.inf, Nmodes3D_xi)
+    xi3D     = jnp.zeros((xi3D_mono.shape[0], 3), dtype=jnp.float32)
+    xi3D = jax.ops.index_update(xi3D, jax.ops.index[:,0], xi3D_mono/Nmodes3D_xi  / dims**3)
+    xi3D = jax.ops.index_update(xi3D, jax.ops.index[:,1], xi3D_quad/Nmodes3D_xi * 5. / dims**3)
+    xi3D = jax.ops.index_update(xi3D, jax.ops.index[:,2], xi3D_hexa/Nmodes3D_xi * 9. / dims**3)
+    r3D = 0.5 * (kedges[1:] + kedges[:-1]) * (box_size * 1.0 / dims)
+    
+    return k3D, Pk3D, Nmodes3D_pk, r3D, xi3D
+
+

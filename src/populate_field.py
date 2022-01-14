@@ -8,8 +8,12 @@ def get_positions(key, number_particles, bin_size):
     
     return Rs * bin_size
 
-def populate_field(rho, n_bins, box_size, key):
+def populate_field(rho, n_bins, box_size, density, key):
     bin_size = box_size / n_bins
+    cell_volume = bin_size**3
+    mean_obj_per_cell = cell_volume * density
+    
+    rho *= mean_obj_per_cell / rho.mean()
     nonzero = (rho != 0).sum()
     sorted_rho = jnp.argsort(rho.ravel())[::-1]#[:nonzero+1]
     
