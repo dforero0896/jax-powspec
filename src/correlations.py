@@ -463,8 +463,10 @@ def bispec(delta, box_size, k1, k2, theta):
     #ID = dims2*kxx + dims*kyy + kzz
     id_mask = jnp.logical_and(k[:,:,:,None] >= k_min[None, None, None, :], k[:,:,:,None] < k_max[None, None, None, :])
     
-    delta1_k = jnp.where(id_mask[:,:,:,0], delta_k, 0.)
-    I1_k = jnp.where(id_mask[:,:,:,0], 1., 0.)
+    #delta1_k = jnp.where(id_mask[:,:,:,0], delta_k, 0.)
+    #I1_k = jnp.where(id_mask[:,:,:,0], 1., 0.)
+    delta1_k = id_mask[:,:,:,0] * delta_k
+    I1_k = id_mask[:,:,:,0]
 
     delta1 = jnp.fft.irfftn(delta1_k, delta.shape)
     I1 = jnp.fft.irfftn(I1_k, delta.shape)
@@ -483,8 +485,10 @@ def bispec(delta, box_size, k1, k2, theta):
 
     # Fill delta2_k array and compute delta2
 
-    delta2_k = jnp.where(id_mask[:,:,:,1], delta_k, 0.)
-    I2_k = jnp.where(id_mask[:,:,:,1], 1., 0.)
+    #delta2_k = jnp.where(id_mask[:,:,:,1], delta_k, 0.)
+    #I2_k = jnp.where(id_mask[:,:,:,1], 1., 0.)
+    delta2_k = id_mask[:,:,:,1] * delta_k
+    I2_k = id_mask[:,:,:,1]
 
     delta2 = jnp.fft.irfftn(delta2_k, delta.shape)
     I2 = jnp.fft.irfftn(I2_k, delta.shape)
@@ -506,8 +510,10 @@ def bispec(delta, box_size, k1, k2, theta):
         # x is the iteration index
         id_mask, delta_k, box_size, Pk, delta1, delta2, I1, I2 = carry
         dims = delta_k.shape[0]
-        delta3_k = jnp.where(id_mask[:,:,:,x+2], delta_k, 0.)
-        I3_k = jnp.where(id_mask[:,:,:,x+2], 1., 0.)
+        #delta3_k = jnp.where(id_mask[:,:,:,x+2], delta_k, 0.)
+        #I3_k = jnp.where(id_mask[:,:,:,x+2], 1., 0.)
+        delta3_k = id_mask[:,:,:,x+2] * delta_k
+        I3_k = id_mask[:,:,:,x+2]
 
         delta3 = jnp.fft.irfftn(delta3_k, (dims, dims, dims))
         I3 = jnp.fft.irfftn(I3_k, (dims, dims, dims))
@@ -636,7 +642,8 @@ def compute_all_correlations(delta, box_size, s_edges, k_edges, k1, k2, theta):
     id_mask = jnp.logical_and(k[:,:,:,None] >= k_min[None, None, None, :], k[:,:,:,None] < k_max[None, None, None, :])
     
     delta1_k = jnp.where(id_mask[:,:,:,0], delta_k, 0.)
-    I1_k = jnp.where(id_mask[:,:,:,0], 1., 0.)
+    #I1_k = jnp.where(id_mask[:,:,:,0], 1., 0.)
+    I1_k = id_mask[:,:,:,0]
 
     delta1 = jnp.fft.irfftn(delta1_k, delta.shape)
     I1 = jnp.fft.irfftn(I1_k, delta.shape)
@@ -656,7 +663,8 @@ def compute_all_correlations(delta, box_size, s_edges, k_edges, k1, k2, theta):
     # Fill delta2_k array and compute delta2
 
     delta2_k = jnp.where(id_mask[:,:,:,1], delta_k, 0.)
-    I2_k = jnp.where(id_mask[:,:,:,1], 1., 0.)
+    #I2_k = jnp.where(id_mask[:,:,:,1], 1., 0.)
+    I2_k = id_mask[:,:,:,1]
 
     delta2 = jnp.fft.irfftn(delta2_k, delta.shape)
     I2 = jnp.fft.irfftn(I2_k, delta.shape)
@@ -679,7 +687,8 @@ def compute_all_correlations(delta, box_size, s_edges, k_edges, k1, k2, theta):
         id_mask, delta_k, box_size, Pk, delta1, delta2, I1, I2 = carry
         dims = delta_k.shape[0]
         delta3_k = jnp.where(id_mask[:,:,:,x+2], delta_k, 0.)
-        I3_k = jnp.where(id_mask[:,:,:,x+2], 1., 0.)
+        #I3_k = jnp.where(id_mask[:,:,:,x+2], 1., 0.)
+        I3_k = id_mask[:,:,:,x+2]
 
         delta3 = jnp.fft.irfftn(delta3_k, (dims, dims, dims))
         I3 = jnp.fft.irfftn(I3_k, (dims, dims, dims))
