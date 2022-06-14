@@ -66,17 +66,17 @@ def cic_mas(delta,
         #print(ixp, iyp, izp)       
         ixp, iyp, izp, ddx, ddy, ddz, n_bins = jax.lax.cond(wrap, wrap_fun, nowrap_fun, (ixp, iyp, izp, ddx, ddy, ddz, n_bins))
         #print(ixp, iyp, izp)
+        delta = delta.at[(ix, iy, iz)].add(mdx * mdy * mdz * weight)
+        delta = delta.at[(ixp, iy, iz)].add(ddx * mdy * mdz * weight)
+        delta = delta.at[(ix, iyp, iz)].add(mdx * ddy * mdz * weight)
+        delta = delta.at[(ix, iy, izp)].add(mdx * mdy * ddz * weight)
+        
+        delta = delta.at[(ixp, iyp, iz)].add(ddx * ddy * mdz * weight)
+        delta = delta.at[(ixp, iy, izp)].add(ddx * mdy * ddz * weight)
+        delta = delta.at[(ix, iyp, izp)].add(mdx * mdy * ddz * weight)
 
-        delta = jax.ops.index_add(delta, (ix, iy, iz), mdx * mdy * mdz * weight)
-        delta = jax.ops.index_add(delta, (ixp, iy, iz), ddx * mdy * mdz * weight)
-        delta = jax.ops.index_add(delta, (ix, iyp, iz), mdx * ddy * mdz * weight)
-        delta = jax.ops.index_add(delta, (ix, iy, izp), mdx * mdy * ddz * weight)
+        delta = delta.at[(ixp, iyp, izp)].add(ddx * ddy * ddz * weight)
 
-        delta = jax.ops.index_add(delta, (ixp, iyp, iz), ddx * ddy * mdz * weight)
-        delta = jax.ops.index_add(delta, (ixp, iy, izp), ddx * mdy * ddz * weight)
-        delta = jax.ops.index_add(delta, (ix, iyp, izp), mdx * ddy * ddz * weight)
-
-        delta = jax.ops.index_add(delta, (ixp, iyp, izp), ddx * ddy * ddz * weight)
 
         return (delta, xmin, ymin, zmin, n_bins, wrap), (x, y, z, w)
     
@@ -139,16 +139,16 @@ def cic_mas_vec(delta,
     mdy = (1.0 - ddy)
     mdz = (1.0 - ddz)
 
-    delta = jax.ops.index_add(delta, (ix, iy, iz), mdx * mdy * mdz * w)
-    delta = jax.ops.index_add(delta, (ixp, iy, iz), ddx * mdy * mdz * w)
-    delta = jax.ops.index_add(delta, (ix, iyp, iz), mdx * ddy * mdz * w)
-    delta = jax.ops.index_add(delta, (ix, iy, izp), mdx * mdy * ddz * w)
+    delta = delta.at[(ix, iy, iz)].add(mdx * mdy * mdz * w)
+    delta = delta.at[(ixp, iy, iz)].add(ddx * mdy * mdz * w)
+    delta = delta.at[(ix, iyp, iz)].add(mdx * ddy * mdz * w)
+    delta = delta.at[(ix, iy, izp)].add(mdx * mdy * ddz * w)
+    
+    delta = delta.at[(ixp, iyp, iz)].add(ddx * ddy * mdz * w)
+    delta = delta.at[(ixp, iy, izp)].add(ddx * mdy * ddz * w)
+    delta = delta.at[(ix, iyp, izp)].add(mdx * mdy * ddz * w)
 
-    delta = jax.ops.index_add(delta, (ixp, iyp, iz), ddx * ddy * mdz * w)
-    delta = jax.ops.index_add(delta, (ixp, iy, izp), ddx * mdy * ddz * w)
-    delta = jax.ops.index_add(delta, (ix, iyp, izp), mdx * ddy * ddz * w)
-
-    delta = jax.ops.index_add(delta, (ixp, iyp, izp), ddx * ddy * ddz * w)
+    delta = delta.at[(ixp, iyp, izp)].add(ddx * ddy * ddz * w)
 
     return delta
 
@@ -156,7 +156,7 @@ def cic_mas_vec(delta,
 
     
     
-    return delta
+    
 
 
 
